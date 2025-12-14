@@ -2,43 +2,21 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
+import java.util.stream.Collectors;
 
 /**
  * MIT License
  *
  * Copyright(c) 2022-24 João Caram <caram@pucminas.br>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
  */
-
 public class XulambsPizza {
     static Scanner teclado;
     static BaseDados<Cliente> clientes;
@@ -93,7 +71,6 @@ public class XulambsPizza {
     static void gerarPedidos() {
         Random aleat = new Random(42);
         int quantos = clientes.size() * 16;
-        // pedidos = new Pedido[quantos*2];
         Pedido pedido;
         IProduto comida = null;
         for (int i = 0; i < quantos; i++) {
@@ -147,13 +124,11 @@ public class XulambsPizza {
             todosOsPedidos.put(pedido);
         }
     }
-
     
     static void config() {
         gerarClientes();
         gerarPedidos();
     }
-
     //#endregion
       
     //#region menus
@@ -178,6 +153,9 @@ public class XulambsPizza {
         System.out.println("14 - Relatório ordenado dos pedidos (escolha)");
         System.out.println("15 - Valor médio dos pedidos");
 
+        System.out.println("======= Exercício ======");
+        System.out.println("99 -  Executar Questão 1 (Completa)");
+
         System.out.println("0 - Finalizar");
         return lerInteiro("Digite sua escolha");
     }
@@ -197,7 +175,7 @@ public class XulambsPizza {
         System.out.println("3 - Sobremesas");
         System.out.println("0 - Sair");
         return lerInteiro("Digite sua escolha");
-}
+    }
     //#endregion
 
     //#region escolha enumeradores
@@ -232,7 +210,6 @@ public class XulambsPizza {
     }
     //#endregion
     
-
     static void abrirPedido() {
         cabecalho();
         Pedido novoPedido = escolherTipoPedido();
@@ -291,7 +268,6 @@ public class XulambsPizza {
             System.out.println("Pedido não existente.");
     }
 
-    
     static Pedido localizarPedido() {
         cabecalho();
         int id;
@@ -371,7 +347,6 @@ public class XulambsPizza {
         } catch (IllegalStateException ise){
            // TODO: handle exception     
         }
-        
     }
 
     static void atualizarFidelidades() {
@@ -389,10 +364,8 @@ public class XulambsPizza {
     static void mostrarPedido(Pedido pedido) {
         System.out.println("Relatório do Pedido: ");
         System.out.println(pedido.toString());
-
     }
 
-    
     public static void main(String[] args) throws Exception {
         teclado = new Scanner(System.in);
         todosOsPedidos = new BaseDados<>(1000);
@@ -401,7 +374,6 @@ public class XulambsPizza {
         int opcao;
         opcao = exibirMenu();
         do {
-            
             switch (opcao) {
                 case 1 -> abrirPedido();
                 case 2 -> alterarPedido();
@@ -418,7 +390,11 @@ public class XulambsPizza {
                 case 13 -> relatorioOrdenado(todosOsPedidos, Pedido::compareTo);
                 case 14 -> filtroPorGastoCliente();
                 case 15 -> valorMedioDosPedidos();
-             
+                
+                /**
+                 * Exercício Final 
+                 */
+                case 99 -> executarQuestao1();
             }
             pausa();
             opcao = exibirMenu();
@@ -436,7 +412,6 @@ public class XulambsPizza {
         Predicate<Cliente> filtro = 
                     cli -> cli.totalEmPedidos() >= valor;
         System.out.println(clientes.filteredReport(filtro));
-        
     }
 
     private static void totalGastoPorClientes() {
@@ -490,6 +465,103 @@ public class XulambsPizza {
         );
     }
 
-    
+    // ========================================================================
+    //  MÉTODOS / EXERCÍCIO (QUESTÃO 1)
+    // ========================================================================
 
+    // Infraestrutura (Conversor)
+    private static <T> List<T> converterParaLista(BaseDados<T> base){
+        List<T> listaTemporaria = new ArrayList<>();
+        base.processData(e -> listaTemporaria.add(e));
+        return listaTemporaria;
+    }
+    
+    // a) Média Pleno
+    private static double mediaPleno(List<Cliente> clientes){
+        return clientes.stream()
+                        .filter(c -> c.toString().contains("Pleno"))
+                        .mapToDouble(Cliente::totalEmPedidos)
+                        .average()
+                        .orElse(0.0);
+    }
+
+    // b) Quantidade Acima da Média
+    private static long quantPedidosAcimaDaMedia(List<Pedido> pedidos){
+        if(pedidos.isEmpty()) return 0;
+
+        double mediaGeral = pedidos.stream()
+                                   .mapToDouble(Pedido::precoAPagar)
+                                   .average()
+                                   .orElse(0.0);
+
+        return pedidos.stream().filter(p -> p.precoAPagar() > mediaGeral).count();
+    }
+
+    // c) Filtro Doce de Leite
+    private static List<Pedido> filtrarPedidosDoceDeLeite(List<Pedido> pedidos){
+        return pedidos.stream().filter(p -> p.toString().contains("doce de leite"))
+                               .sorted(Comparator.comparingDouble(Pedido::precoAPagar))
+                               .collect(Collectors.toList());
+    }
+
+    // d) Junior Maior Gasto
+    private static Cliente buscarJuniorMaiorGasto(List<Cliente> clientes){
+        return clientes.stream().filter(c -> c.toString().contains("Júnior"))
+                                .max(Comparator.comparingDouble(Cliente::totalEmPedidos))
+                                .orElse(null);
+    }
+
+    // e) Porcentagem Pizza Max
+    private static double calcularPorcentagemPizzaMax(List<Pedido> pedidos){
+        if(pedidos.isEmpty()) return 0.0;
+
+        long countMax = pedidos.stream()
+                                .filter(p -> p.toString().contains("8") && p.toString()
+                                .contains("Pizza"))
+                                .count();
+        return (double) countMax / pedidos.size() * 100.0;
+    }
+
+    /**
+     *  Imprime o exercício no terminal
+     */
+    static void executarQuestao1(){
+        cabecalho();
+        System.out.println("=== RESOLUÇÃO EXERCÍCIO - QUESTÃO 1 ===");
+        System.out.println("---------------------------------------");
+
+        List<Cliente> listarCliente = converterParaLista(clientes);
+        List<Pedido> listaPedidos = converterParaLista(todosOsPedidos);
+
+        // 1 - a
+        System.out.printf("1a) Média Gastos (Pleno): R$ %.2f\n", mediaPleno(listarCliente));
+        
+        // 1 - b
+        long qtdAcima = quantPedidosAcimaDaMedia(listaPedidos);
+        System.out.println("1b) Pedidos acima da média: " + qtdAcima);
+        
+        // 1 - c
+        System.out.println("1c) Pedidos com doce de leite:");
+        List<Pedido> doces = filtrarPedidosDoceDeLeite(listaPedidos);
+        if (doces.isEmpty()) {
+            System.out.println("    - Nenhum pedido encontrado.");
+        } else {
+            doces.forEach(p -> System.out.println("    -> " + p.toString().split("\n")[0] + " | R$ " + p.precoAPagar()));
+        }
+
+        // 1 - d 
+        Cliente junior = buscarJuniorMaiorGasto(listarCliente);
+        if (junior != null) {
+            System.out.printf("1d) Maior gasto Júnior: %s (R$ %.2f)\n", junior.getNome(), junior.totalEmPedidos());
+        } else {
+            System.out.println("1d) Nenhum cliente Júnior encontrado.");
+        }
+
+        // 1 - e
+        double pct = calcularPorcentagemPizzaMax(listaPedidos);
+        System.out.printf("1e) Porcentagem Pizza Max: %.2f%%\n", pct);
+
+        System.out.println("---------------------------------------");
+        System.out.println("Fim do Relatório.");
+    }
 }
